@@ -1,0 +1,15 @@
+#+TITLE: Implementing CNN forward and backward propagation using PyTorch
+
+This is an exercise to understand the working of a neural network. Though PyTorch supports backpropagation through computational graphs, I'm ignoring it and implementing it from scratch.
+
+* Layout
+The CNN I'm going to build is the LeNet 5 architecture, which is as follows.
+
+[[./images/lenet5.png]]
+
+We can create layers in the neural network using the ~torch.Module~ class. The forward propagation will be implemented when doing the same. The code for Backpropagation and weight update will be written and executed after the forward propagation is done.
+
+The network is organized in the following files
+- =main.py=: The code for forward and backpropagation is written here.
+- =model.py=: LeNet5 is implemented here.
+- =activation.py:= Contains the ReLU activation implementation.
