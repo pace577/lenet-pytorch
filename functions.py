@@ -73,8 +73,8 @@ class MyConv(torch.autograd.Function):
         for k in range(out_channels):
             for i in range(dl_dx.shape[1]):
                 for j in range(dl_dx.shape[2]):
-                    grads = dl_dy_pad[k,:,:].repeat(in_channels,1,1)
-                    dl_dx[:,i,j] += torch.sum(grads[:, i:i+k_size, j:j+k_size] * kernels[k,:,:,:], dim=(1,2))
+                    grads_pad = dl_dy_pad[k,:,:].repeat(in_channels,1,1)
+                    dl_dx[:,i,j] += torch.sum(grads_pad[:, i:i+k_size, j:j+k_size] * kernels[k,:,:,:], dim=(1,2))
 
         # Kernel gradients
         dl_dw = torch.zeros(*w.shape)
@@ -113,7 +113,6 @@ class MyPool(torch.autograd.Function):
         k_size = ctx.k_size
         stride = ctx.stride
         dl_dx = torch.zeros(*x.shape) #change this expression
-        print(dl_dx)
 
         for k in range(dl_dy.shape[0]):
             for i in range(dl_dy.shape[1]):
@@ -124,9 +123,7 @@ class MyPool(torch.autograd.Function):
                     z = torch.zeros(k_size, k_size)
                     z[int(idx/2),int(idx%2)] = dl_dy[k,i,j]
                     dl_dx[k,ii:ii+k_size,jj:jj+k_size] += z
-                    print(x[k, ii:ii+k_size, jj:jj+k_size], torch.argmax(x[k, ii:ii+k_size, jj:jj+k_size], dim=1), z)
 
-        print(dl_dx)
         return dl_dx, None, None
 
 
@@ -146,3 +143,19 @@ class MyDense(torch.autograd.Function):
         dl_dw = dl_dy.reshape(dl_dy.shape+(1,)) @ x.reshape((1,)+x.shape)
         dl_db = dl_dy
         return dl_dx, dl_dw, dl_db
+
+
+class MyCrossentropyLoss(torch.autograd.Function):
+    """Implementation of Crossentropy loss with softmax"""
+    @staticmethod
+    def forward(ctx, y_preds, y_labels):
+        ctx.save_for_backward(y_preds, y_labels)
+        return -torch.sum(y_preds*y_labels) + torch.log(torch.exp(y_preds).sum())
+
+    @staticmethod
+    def backward(ctx, loss):
+        """Return d_loss/d_y_preds"""
+        y_preds, y_labels = ctx.saved_tensors
+        preds_exp = torch.exp(y_preds)
+        d_loss = -y_labels + preds_exp/(preds_exp.sum() + 1e-7)
+        return d_loss, None
