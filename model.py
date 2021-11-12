@@ -15,7 +15,7 @@ class ConvLayer(nn.Module):
         fan_in = in_maps * self.receptive_field_size
         fan_out = out_maps * self.receptive_field_size
         self.kernels = nn.Parameter(torch.randn(out_maps, in_maps, k_size, k_size) * (4 / (fan_in + fan_out))**0.5) #Kaiming initialization
-        self.biases = nn.Parameter(torch.randn(out_maps))
+        self.biases = nn.Parameter(torch.randn(out_maps) * (2 / out_maps)**0.5)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Implements valid convolution."""
@@ -29,7 +29,7 @@ class FCLayer(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.weights = nn.Parameter(torch.randn(out_features, in_features) * (4 / (in_features + out_features))**0.5) #Kaiming initialization
-        self.biases = nn.Parameter(torch.randn(out_features))
+        self.biases = nn.Parameter(torch.randn(out_features) * (2 / out_features)**0.5)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of fully connected layer"""

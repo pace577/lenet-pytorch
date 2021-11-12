@@ -33,30 +33,33 @@ def train(args: argparse.Namespace):
     # Model and Hyperparameters
     model = LeNet5(3,10)
     loss_fn = MyCrossentropyLoss.apply
-    learning_rate = 1e-3
-    epochs = 1
+    learning_rate = args.learning_rate
+    epochs = args.epochs
 
-    print("Model's state_dict:")
-    for param_tensor in model.state_dict():
-        print(param_tensor, "\t", model.state_dict()[param_tensor].size())
+    # print("Model's state_dict:")
+    # for param_tensor in model.state_dict():
+    #     print(param_tensor, "\t", model.state_dict()[param_tensor].size())
 
     # Training loop
     for epoch in range(epochs):
         print(f"Starting Epoch {epoch+1}")
         epoch_loss = 0
         for i, (features, labels) in tqdm(enumerate(trainloader)):
-            features = features.to(device)
-            labels = F.one_hot(labels, num_classes=10).to(device)
-            preds = model(features.squeeze())
+            features = features.squeeze().to(device)
+            labels = F.one_hot(labels, num_classes=10).squeeze().to(device)
+            preds = model(features)
+            # print(features.mean(), features.var())
+            # print(preds, labels)
             loss = loss_fn(preds, labels)
             loss.backward()
             with torch.no_grad():
                 epoch_loss += float(loss.numpy())
                 for param in model.parameters(recurse=True):
                     if param.grad is not None:
-                        param -= learning_rate*param.grad
+                        param -= learning_rate*param.grad   #update weights
                         # print(param.mean(), param.grad.mean(), param.shape)
-                        param.grad[param.grad!=0] = 0
+                        # param.grad[param.grad!=0] = 0       #set gradients to 0
+                        param.grad *= 0       #set gradients to 0
 
             if i%20==0:
                 print(features.squeeze().shape, labels.shape)
@@ -94,9 +97,11 @@ def test(args: argparse.Namespace):
             loss = loss_fn(preds, labels)
             testing_loss += float(loss.numpy())
 
-            if i%20==0:
-                print(features.squeeze().shape, labels.shape)
-                print(f"Batch #{i}, Epoch Loss: {testing_loss/(i+1):.6}, Batch Loss: {loss:.6}")
+            # if i%20==0:
+            #     print(features.squeeze().shape, labels.shape)
+            #     print(f"Batch #{i}, Testing Loss: {testing_loss/(i+1):.6}, Batch Loss: {loss:.6}")
+
+    print(f"Testing loss: {testing_loss:.6}")
 
 
 if __name__ == '__main__':
@@ -107,10 +112,19 @@ if __name__ == '__main__':
     train_parser.add_argument('--model-path',
                               help="Path to save the model after training",
                               default=f"./models/lenet5_{time.strftime('%Y%m%d-%H%M%S')}")
+    train_parser.add_argument('--epochs',
+                              help="Number of epochs to train",
+                              type=int,
+                              default=1)
+    train_parser.add_argument('--learning-rate',
+                              help="Learning rate for gradient descent",
+                              type=float,
+                              default=1e-4)
     train_parser.set_defaults(func=train)
     test_parser = subparsers.add_parser('test', help="Test a pretrained model (trains a model from scratch if model path is not specified)")
     test_parser.add_argument('--model-path',
                              help="Path to trained model used for testing (trains a model from scratch if model path is not specified)")
     test_parser.set_defaults(func=test)
+
     args = parser.parse_args()
     args.func(args)

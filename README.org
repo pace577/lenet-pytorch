@@ -1,15 +1,19 @@
 #+TITLE: Implementing CNN forward and backward propagation using PyTorch
 
-This is an exercise to understand the working of a neural network. Though PyTorch supports backpropagation through computational graphs, I'm ignoring it and implementing it from scratch.
+* Overview
+This is an exercise to understand the working of a neural network. PyTorch supports backpropagation through computational graphs, so I'm leveraging that functionality while creating my own functions to compute the quantities that will be transferred during backpropagation, to make the code more compact.
 
-* Layout
-The CNN I'm going to build is the LeNet 5 architecture, which is as follows.
+The CNN I'm going to build is the LeNet 5 architecture, which looks like follows.
 
 [[./images/lenet5.png]]
 
-We can create layers in the neural network using the ~torch.Module~ class. The forward propagation will be implemented when doing the same. The code for Backpropagation and weight update will be written and executed after the forward propagation is done.
+* Approach
+We can create layers in the neural network using the ~torch.Module~ class. Each layer initializes parameters and passes them through a custom written function, which is a child of the ~torch.autograd.Function~ class. The forward propagation and backpropagation will be implemented within the custom function. This enables us to compute the loss from the model outputs (using another custom function) and run ~loss.backward()~ to backpropagate the gradients computed using your code.
 
+After backpropagation, we iterate through each parameter tensor, update the weights using the stored gradients, and equate the stored gradient values with 0 to prepare it for the next batch.
+
+* Layout
 The network is organized in the following files
-- =main.py=: The code for forward and backpropagation is written here.
-- =model.py=: LeNet5 is implemented here.
-- =activation.py:= Contains the ReLU activation implementation.
+- =main.py=: The code for training and testing the model is written here. Programmed a small CLI application using ~argparse~ to make using the script much easier. Execute ~python main.py -h~ to understand how the script can be used from the shell.
+- =model.py=: LeNet5 is implemented here, along with the Convolution, Pooling and Fully Connected layers used in it.
+- =functions.py:= Contains functions for operations used by Convolution, Pooling, Dense layers. Also contains functions for the ReLU activation and Crossentropy loss.

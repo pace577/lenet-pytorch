@@ -17,8 +17,9 @@ class MyReLU(torch.autograd.Function):
         ctx.save_for_backward(x)
         # self.inputs = torch.Tensor(*x.shape)
         # self.inputs = self.inputs.copy_(x)
-        x[x<0] = 0
-        return x
+        out = x.clone()
+        out[x<0] = 0
+        return out
 
     @staticmethod
     def backward(ctx, dl_dy: torch.Tensor) -> torch.Tensor:
@@ -85,7 +86,7 @@ class MyConv(torch.autograd.Function):
                     dl_dw[k,:,i,j] += torch.sum(x[:, i:i+grads.shape[1], j:j+grads.shape[2]] * grads[:,:,:], dim=(1,2))
 
         # Bias gradients
-        dl_db = dl_dy.mean(dim=(1,2))
+        dl_db = dl_dy.mean(dim=(1,2)).clone()
         return dl_dx, dl_dw, dl_db, None, None
 
 
@@ -140,8 +141,8 @@ class MyDense(torch.autograd.Function):
         x, w = ctx.saved_tensors
         # dl_dx = dl_dy.clone() #change this expression
         dl_dx = torch.transpose(w, 0, 1) @ dl_dy
-        dl_dw = dl_dy.reshape(dl_dy.shape+(1,)) @ x.reshape((1,)+x.shape)
-        dl_db = dl_dy
+        dl_dw = dl_dy.reshape(tuple(dl_dy.shape)+(1,)) @ x.reshape((1,)+tuple(x.shape))
+        dl_db = dl_dy.clone()
         return dl_dx, dl_dw, dl_db
 
 
@@ -150,12 +151,12 @@ class MyCrossentropyLoss(torch.autograd.Function):
     @staticmethod
     def forward(ctx, y_preds, y_labels):
         ctx.save_for_backward(y_preds, y_labels)
-        return -torch.sum(y_preds*y_labels) + torch.log(torch.exp(y_preds).sum())
+        return torch.sum(y_labels*(-y_preds + torch.log(torch.exp(y_preds).sum())))
 
     @staticmethod
     def backward(ctx, loss):
         """Return d_loss/d_y_preds"""
         y_preds, y_labels = ctx.saved_tensors
         preds_exp = torch.exp(y_preds)
-        d_loss = -y_labels + preds_exp/(preds_exp.sum() + 1e-7)
+        d_loss = y_labels*(-1 + preds_exp/preds_exp.sum())
         return d_loss, None
